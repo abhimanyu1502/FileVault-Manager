@@ -1,0 +1,16 @@
+# Python caches
+__pycache__/
+*.py[cod]
+*$py.class
+
+# IDE and Editor Files
+.kilocode/
+.history/
+.vscode/sftp.json
+.vscode/project.association.json
+
+# Operating System Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

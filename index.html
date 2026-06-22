@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FileVault — File Manager</title>
+  <meta name="description"
+    content="A clean, minimal file handling interface to create, read, update, and delete files." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Sora:wght@300;400;500;600&display=swap"
+    rel="stylesheet" />
+  <style>
+    *,
+    *::before,
+    *::after {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    :root {
+      --bg: #0f0f11;
+      --surface: #17171a;
+      --surface2: #1e1e22;
+      --border: #2a2a30;
+      --accent: #c8f055;
+      --accent-dim: #8fad2b;
+      --text: #e8e8ec;
+      --text-muted: #7a7a88;
+      --danger: #ff5e5e;
+      --success: #4dffa0;
+      --nav-w: 240px;
+      --radius: 14px;
+    }
+
+    html,
+    body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', sans-serif;
+      font-size: 15px;
+      line-height: 1.6;
+      overflow: hidden;
+    }
+
+    /* ─── LAYOUT ─── */
+    .shell {
+      display: flex;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* ─── SIDEBAR ─── */
+    .sidebar {
+      width: var(--nav-w);
+      min-width: var(--nav-w);
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 28px 0 20px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .brand {
+      padding: 0 24px 28px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-icon {
+      width: 38px;
+      height: 38px;
+      background: var(--accent);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .brand-icon svg {
+      color: #0f0f11;
+    }
+
+    .brand-name {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.35rem;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .brand-sub {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    .nav {
+      flex: 1;
+      padding: 20px 12px 0;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nav-label {
+      font-size: 0.68rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      padding: 0 12px;
+      margin-bottom: 6px;
+      margin-top: 10px;
+    }
+
+    .nav-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 11px 14px;
+      border-radius: 10px;
+      cursor: pointer;
+      border: none;
+      background: transparent;
+      color: var(--text-muted);
+      font-family: 'Sora', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      width: 100%;
+      text-align: left;
+      transition: all 0.18s ease;
+      position: relative;
+    }
+
+    .nav-btn .icon {
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      background: var(--surface2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: background 0.18s ease;
+    }
+
+    .nav-btn:hover {
+      background: var(--surface2);
+      color: var(--text);
+    }
+
+    .nav-btn:hover .icon {
+      background: var(--border);
+    }
+
+    .nav-btn.active {
+      background: rgba(200, 240, 85, 0.1);
+      color: var(--accent);
+    }
+
+    .nav-btn.active .icon {
+      background: var(--accent);
+    }
+
+    .nav-btn.active .icon svg {
+      color: #0f0f11;
+    }
+
+    .sidebar-footer {
+      padding: 16px 20px 0;
+      border-top: 1px solid var(--border);
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+
+    .sidebar-footer span {
+      display: block;
+      font-family: 'DM Mono', monospace;
+      color: var(--accent-dim);
+      margin-top: 2px;
+    }
+
+    /* ─── MAIN ─── */
+    .main {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 22px 36px 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      position: sticky;
+      top: 0;
+      z-index: 5;
+      backdrop-filter: blur(10px);
+    }
+
+    .page-title {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.6rem;
+      letter-spacing: -0.5px;
+      color: var(--text);
+    }
+
+    .page-badge {
+      font-size: 0.72rem;
+      background: rgba(200, 240, 85, 0.12);
+      color: var(--accent);
+      border: 1px solid rgba(200, 240, 85, 0.25);
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-weight: 500;
+      letter-spacing: 0.04em;
+    }
+
+    /* ─── PANELS ─── */
+    .panel {
+      display: none;
+      padding: 36px;
+      animation: fadeIn 0.25s ease;
+      max-width: 680px;
+    }
+
+    .panel.visible {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .panel-desc {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-bottom: 28px;
+      line-height: 1.7;
+    }
+
+    /* ─── FORM ELEMENTS ─── */
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    label {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 7px;
+    }
+
+    input[type="text"],
+    textarea,
+    select {
+      width: 100%;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: var(--text);
+      font-family: 'DM Mono', monospace;
+      font-size: 0.9rem;
+      transition: border-color 0.18s ease, box-shadow 0.18s ease;
+      outline: none;
+    }
+
+    input[type="text"]:focus,
+    textarea:focus,
+    select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(200, 240, 85, 0.12);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+
+    select option {
+      background: var(--surface2);
+    }
+
+    /* ─── BUTTONS ─── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-family: 'Sora', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 600;
+      transition: all 0.18s ease;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #0f0f11;
+    }
+
+    .btn-primary:hover {
+      background: #d8ff66;
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px rgba(200, 240, 85, 0.3);
+    }
+
+    .btn-danger {
+      background: rgba(255, 94, 94, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(255, 94, 94, 0.25);
+    }
+
+    .btn-danger:hover {
+      background: rgba(255, 94, 94, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-ghost {
+      background: var(--surface);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--text-muted);
+      color: var(--text);
+    }
+
+    /* ─── SUB-OPTIONS (Update panel) ─── */
+    .option-cards {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    .option-card {
+      padding: 14px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      cursor: pointer;
+      text-align: center;
+      background: var(--surface);
+      transition: all 0.18s ease;
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .option-card:hover {
+      border-color: var(--accent-dim);
+      color: var(--text);
+    }
+
+    .option-card.selected {
+      border-color: var(--accent);
+      background: rgba(200, 240, 85, 0.08);
+      color: var(--accent);
+    }
+
+    .option-card .oc-icon {
+      font-size: 1.4rem;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.88rem;
+      font-weight: 500;
+      box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5);
+      opacity: 0;
+      transform: translateY(14px);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      pointer-events: none;
+      z-index: 999;
+      max-width: 360px;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    #toast.success {
+      border-color: rgba(77, 255, 160, 0.35);
+    }
+
+    #toast.error {
+      border-color: rgba(255, 94, 94, 0.35);
+    }
+
+    .toast-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .success .toast-dot {
+      background: var(--success);
+    }
+
+    .error .toast-dot {
+      background: var(--danger);
+    }
+
+    /* ─── FILE CONTENT DISPLAY ─── */
+    .file-content-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px 20px;
+      font-family: 'DM Mono', monospace;
+      font-size: 0.88rem;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 100px;
+      line-height: 1.7;
+      margin-top: 16px;
+      display: none;
+    }
+
+    .file-content-box.visible {
+      display: block;
+    }
+
+    .file-content-header {
+      font-size: 0.72rem;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ─── DIVIDER ─── */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 4px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: var(--text-muted);
+    }
+
+    /* ─── DANGER ZONE ─── */
+    .danger-zone {
+      border: 1px solid rgba(255, 94, 94, 0.2);
+      border-radius: 12px;
+      padding: 20px 22px;
+      background: rgba(255, 94, 94, 0.04);
+      margin-top: 16px;
+    }
+
+    .danger-zone h4 {
+      color: var(--danger);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+    }
+
+    .danger-zone p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 16px;
+    }
+
+    /* ─── HIDDEN SUB-FORMS ─── */
+    .sub-form {
+      display: none;
+    }
+
+    .sub-form.visible {
+      display: block;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="shell">
+
+    <!-- ── SIDEBAR ── -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="brand-icon">
+          <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+        </div>
+        <div class="brand-name">FileVault</div>
+        <div class="brand-sub">File Manager</div>
+      </div>
+
+      <nav class="nav">
+        <div class="nav-label">Operations</div>
+
+        <button class="nav-btn active" id="nav-create" onclick="switchPanel('create')">
+          <span class="icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+            </svg>
+          </span>
+          Create File
+        </button>
+
+        <button class="nav-btn" id="nav-read" onclick="switchPanel('read')">
+          <span class="icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0120 9.414V19a2 2 0 01-2 2z" />
+            </svg>
+          </span>
+          Read File
+        </button>
+
+        <button class="nav-btn" id="nav-update" onclick="switchPanel('update')">
+          <span class="icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </span>
+          Update File
+        </button>
+
+        <button class="nav-btn" id="nav-delete" onclick="switchPanel('delete')">
+          <span class="icon">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+          </span>
+          Delete File
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        Files in session
+        <span id="file-count">0 files</span>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <div class="main">
+
+      <div class="topbar">
+        <h1 class="page-title" id="page-title">Create File</h1>
+        <span class="page-badge" id="page-badge">NEW</span>
+      </div>
+
+      <!-- CREATE PANEL -->
+      <section class="panel visible" id="panel-create">
+        <p class="panel-desc">Give your file a name and write the initial content. The file will be stored in memory for
+          this session.</p>
+        <div class="form-group">
+          <label for="create-name">File Name</label>
+          <input type="text" id="create-name" placeholder="e.g. notes.txt" />
+        </div>
+        <div class="form-group">
+          <label for="create-data">File Content</label>
+          <textarea id="create-data" placeholder="Type your content here..."></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="createFile()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+          </svg>
+          Create File
+        </button>
+      </section>
+
+      <!-- READ PANEL -->
+      <section class="panel" id="panel-read">
+        <p class="panel-desc">Enter the name of a file you created in this session to view its contents.</p>
+        <div class="form-group">
+          <label for="read-name">File Name</label>
+          <input type="text" id="read-name" placeholder="e.g. notes.txt" />
+        </div>
+        <button class="btn btn-ghost" onclick="readFile()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+          </svg>
+          Read File
+        </button>
+        <div class="file-content-box" id="read-output">
+          <div class="file-content-header">
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6" />
+            </svg>
+            File Contents
+          </div>
+          <div id="read-content-text"></div>
+        </div>
+      </section>
+
+      <!-- UPDATE PANEL -->
+      <section class="panel" id="panel-update">
+        <p class="panel-desc">Select an existing file and choose how you want to modify it — rename it, append content,
+          or fully overwrite it.</p>
+        <div class="form-group">
+          <label for="update-name">File Name</label>
+          <input type="text" id="update-name" placeholder="e.g. notes.txt" />
+        </div>
+
+        <div class="form-group">
+          <label>Operation</label>
+          <div class="option-cards">
+            <div class="option-card selected" id="oc-rename" onclick="selectOp('rename')">
+              <span class="oc-icon">✏️</span>
+              Rename
+            </div>
+            <div class="option-card" id="oc-append" onclick="selectOp('append')">
+              <span class="oc-icon">➕</span>
+              Append
+            </div>
+            <div class="option-card" id="oc-overwrite" onclick="selectOp('overwrite')">
+              <span class="oc-icon">🔄</span>
+              Overwrite
+            </div>
+          </div>
+        </div>
+
+        <!-- Rename sub-form -->
+        <div class="sub-form visible" id="sf-rename">
+          <div class="form-group">
+            <label for="new-name">New File Name</label>
+            <input type="text" id="new-name" placeholder="e.g. renamed.txt" />
+          </div>
+        </div>
+
+        <!-- Append sub-form -->
+        <div class="sub-form" id="sf-append">
+          <div class="form-group">
+            <label for="append-data">Content to Append</label>
+            <textarea id="append-data" placeholder="Text to add at the end..."></textarea>
+          </div>
+        </div>
+
+        <!-- Overwrite sub-form -->
+        <div class="sub-form" id="sf-overwrite">
+          <div class="form-group">
+            <label for="overwrite-data">New Content</label>
+            <textarea id="overwrite-data" placeholder="This will replace all existing content..."></textarea>
+          </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="updateFile()">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+          </svg>
+          Apply Update
+        </button>
+      </section>
+
+      <!-- DELETE PANEL -->
+      <section class="panel" id="panel-delete">
+        <p class="panel-desc">Permanently remove a file from this session. This action cannot be undone.</p>
+        <div class="form-group">
+          <label for="delete-name">File Name</label>
+          <input type="text" id="delete-name" placeholder="e.g. notes.txt" />
+        </div>
+        <div class="danger-zone">
+          <h4>⚠ Danger Zone</h4>
+          <p>Once you delete a file, it is removed from memory and cannot be recovered in this session.</p>
+          <button class="btn btn-danger" onclick="deleteFile()">
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+            Delete File
+          </button>
+        </div>
+      </section>
+
+    </div><!-- /main -->
+  </div><!-- /shell -->
+
+  <!-- TOAST -->
+  <div id="toast">
+    <span class="toast-dot"></span>
+    <span id="toast-msg">Done!</span>
+  </div>
+
+  <script>
+    // ── In-memory "file system" ──
+    const FILES = {};
+
+    // ── Panel switching ──
+    const panels = { create: 'Create File', read: 'Read File', update: 'Update File', delete: 'Delete File' };
+    const badges = { create: 'NEW', read: 'VIEW', update: 'EDIT', delete: 'DELETE' };
+
+    function switchPanel(name) {
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('visible'));
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      document.getElementById('panel-' + name).classList.add('visible');
+      document.getElementById('nav-' + name).classList.add('active');
+      document.getElementById('page-title').textContent = panels[name];
+      document.getElementById('page-badge').textContent = badges[name];
+      document.getElementById('read-output').classList.remove('visible');
+    }
+
+    // ── Toast ──
+    let toastTimer;
+    function toast(msg, type = 'success') {
+      const el = document.getElementById('toast');
+      el.className = 'show ' + type;
+      document.getElementById('toast-msg').textContent = msg;
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => { el.className = ''; }, 3000);
+    }
+
+    // ── File count ──
+    function updateCount() {
+      const n = Object.keys(FILES).length;
+      document.getElementById('file-count').textContent = n + (n === 1 ? ' file' : ' files');
+    }
+
+    // ── CREATE ──
+    function createFile() {
+      const name = document.getElementById('create-name').value.trim();
+      const data = document.getElementById('create-data').value;
+      if (!name) { toast('Please enter a file name.', 'error'); return; }
+      if (FILES.hasOwnProperty(name)) { toast('Error: file already exists.', 'error'); return; }
+      FILES[name] = data;
+      document.getElementById('create-name').value = '';
+      document.getElementById('create-data').value = '';
+      updateCount();
+      toast('✓ "' + name + '" created successfully.');
+    }
+
+    // ── READ ──
+    function readFile() {
+      const name = document.getElementById('read-name').value.trim();
+      if (!name) { toast('Please enter a file name.', 'error'); return; }
+      if (!FILES.hasOwnProperty(name)) { toast('Error: no such file found.', 'error'); return; }
+      const box = document.getElementById('read-output');
+      document.getElementById('read-content-text').textContent = FILES[name] || '(empty file)';
+      box.classList.add('visible');
+      toast('✓ "' + name + '" loaded.');
+    }
+
+    // ── UPDATE ──
+    let currentOp = 'rename';
+    function selectOp(op) {
+      currentOp = op;
+      ['rename', 'append', 'overwrite'].forEach(o => {
+        document.getElementById('oc-' + o).classList.toggle('selected', o === op);
+        document.getElementById('sf-' + o).classList.toggle('visible', o === op);
+      });
+    }
+
+    function updateFile() {
+      const name = document.getElementById('update-name').value.trim();
+      if (!name) { toast('Please enter a file name.', 'error'); return; }
+      if (!FILES.hasOwnProperty(name)) { toast('Error: file not found.', 'error'); return; }
+
+      if (currentOp === 'rename') {
+        const newName = document.getElementById('new-name').value.trim();
+        if (!newName) { toast('Please enter a new file name.', 'error'); return; }
+        if (FILES.hasOwnProperty(newName)) { toast('Error: a file with that name already exists.', 'error'); return; }
+        FILES[newName] = FILES[name];
+        delete FILES[name];
+        document.getElementById('update-name').value = '';
+        document.getElementById('new-name').value = '';
+        toast('✓ Renamed to "' + newName + '".');
+      } else if (currentOp === 'append') {
+        const data = document.getElementById('append-data').value;
+        FILES[name] += '\n' + data;
+        document.getElementById('append-data').value = '';
+        toast('✓ Content appended to "' + name + '".');
+      } else if (currentOp === 'overwrite') {
+        const data = document.getElementById('overwrite-data').value;
+        FILES[name] = data;
+        document.getElementById('overwrite-data').value = '';
+        toast('✓ "' + name + '" overwritten.');
+      }
+      updateCount();
+    }
+
+    // ── DELETE ──
+    function deleteFile() {
+      const name = document.getElementById('delete-name').value.trim();
+      if (!name) { toast('Please enter a file name.', 'error'); return; }
+      if (!FILES.hasOwnProperty(name)) { toast('Error: file not found.', 'error'); return; }
+      delete FILES[name];
+      document.getElementById('delete-name').value = '';
+      updateCount();
+      toast('✓ "' + name + '" deleted.', 'success');
+    }
+  </script>
+</body>
+
+</html>
